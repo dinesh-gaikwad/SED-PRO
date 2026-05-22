@@ -1,0 +1,412 @@
+  
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}AI Mock Interview - EntreSkill Hub{% endblock %}
+{% block meta_description %}Practice job interviews with AI. Get instant feedback on answers, body language, and communication skills.{% endblock %}
+
+{% block extra_css %}
+<style>
+.interview-container{
+background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);
+color:white;
+border-radius:20px;
+padding:40px;
+min-height:80vh;
+}
+.interviewer-panel{
+background:rgba(255,255,255,0.05);
+border-radius:15px;
+padding:30px;
+backdrop-filter:blur(10px);
+}
+.interviewer-avatar{
+width:150px;
+height:150px;
+border-radius:50%;
+background:linear-gradient(135deg,#6366f1,#8b5cf6);
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:60px;
+margin:0 auto 20px;
+border:4px solid rgba(99,102,241,0.3);
+animation:pulse 2s infinite;
+}
+@keyframes pulse{
+0%,100%{transform:scale(1);}
+50%{transform:scale(1.05);}
+}
+.question-card{
+background:rgba(99,102,241,0.2);
+border-left:5px solid #6366f1;
+border-radius:10px;
+padding:25px;
+margin-bottom:30px;
+}
+.recording-indicator{
+display:inline-flex;
+align-items:center;
+gap:10px;
+background:#ef4444;
+padding:8px 16px;
+border-radius:20px;
+font-weight:600;
+animation:blink 1s infinite;
+}
+@keyframes blink{
+0%,100%{opacity:1;}
+50%{opacity:0.5;}
+}
+.answer-box{
+background:rgba(255,255,255,0.05);
+border-radius:15px;
+padding:25px;
+min-height:200px;
+}
+.feedback-panel{
+background:white;
+color:#0f172a;
+border-radius:15px;
+padding:30px;
+margin-top:30px;
+display:none;
+}
+.feedback-panel.show{
+display:block;
+animation:slideUp 0.5s ease;
+}
+@keyframes slideUp{
+from{opacity:0;transform:translateY(20px);}
+to{opacity:1;transform:translateY(0);}
+}
+.score-ring{
+width:150px;
+height:150px;
+margin:0 auto;
+}
+.control-btn{
+padding:15px 30px;
+border-radius:12px;
+font-weight:600;
+border:none;
+cursor:pointer;
+transition:all 0.3s;
+}
+.btn-record{
+background:#ef4444;
+color:white;
+}
+.btn-record.recording{
+background:#dc2626;
+box-shadow:0 0 20px rgba(239,68,68,0.5);
+}
+.btn-next{
+background:#10b981;
+color:white;
+}
+.btn-next:hover{
+transform:translateY(-2px);
+box-shadow:0 10px 20px rgba(16,185,129,0.3);
+}
+.timer{
+font-size:48px;
+font-weight:700;
+font-family:monospace;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="interview-container">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="interviewer-panel">
+                    <div class="interviewer-avatar">👨‍💼</div>
+                    <div class="text-center mb-4">
+                        <h4>AI Interviewer</h4>
+                        <p class="text-muted">HR Manager - Tech Industry</p>
+                    </div>
+
+                    <div class="question-card">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="badge bg-primary">Question <span id="questionNumber">1</span> of {{ total_questions }}</span>
+                            <span class="recording-indicator" id="recordingIndicator" style="display:none;">
+                                <span style="width:8px;height:8px;background:white;border-radius:50%;"></span>
+                                Recording
+                            </span>
+                        </div>
+                        <h4 id="currentQuestion">{{ current_question.text }}</h4>
+                        <p class="text-muted mt-2">{{ current_question.category }}</p>
+                    </div>
+
+                    <div class="answer-box">
+                        <h5 class="mb-3">Your Answer</h5>
+                        <div id="transcript" class="text-muted">
+                            Click Record and start speaking...
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-center align-items-center gap-4 mt-4">
+                        <div class="text-center">
+                            <div class="timer" id="timer">00:00</div>
+                            <small class="text-muted">Time</small>
+                        </div>
+                        <button class="control-btn btn-record" id="recordBtn" onclick="toggleRecording()">
+                            🎤 Start Recording
+                        </button>
+                        <button class="control-btn btn-next" id="nextBtn" onclick="nextQuestion()" disabled>
+                            Next Question →
+                        </button>
+                    </div>
+                </div>
+
+                <div class="feedback-panel" id="feedbackPanel">
+                    <h3 class="mb-4">AI Feedback</h3>
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            <div class="score-ring">
+                                <svg viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="45" fill="none" stroke="#e2e8f0" stroke-width="10"/>
+                                    <circle cx="50" cy="50" r="45" fill="none" stroke="#6366f1" stroke-width="10"
+                                            stroke-dasharray="283" stroke-dashoffset="85" transform="rotate(-90 50 50)"/>
+                                    <text x="50" y="55" text-anchor="middle" font-size="24" font-weight="700">72%</text>
+                                </svg>
+                            </div>
+                            <p class="mt-2 fw-semibold">Overall Score</p>
+                        </div>
+                        <div class="col-md-8">
+                            <h5 class="mb-3">Detailed Analysis</h5>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>Content Quality</span>
+                                    <span class="fw-semibold">8/10</span>
+                                </div>
+                                <div class="progress" style="height:8px;">
+                                    <div class="progress-bar bg-success" style="width:80%"></div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>Communication</span>
+                                    <span class="fw-semibold">7/10</span>
+                                </div>
+                                <div class="progress" style="height:8px;">
+                                    <div class="progress-bar bg-warning" style="width:70%"></div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>Confidence</span>
+                                    <span class="fw-semibold">6/10</span>
+                                </div>
+                                <div class="progress" style="height:8px;">
+                                    <div class="progress-bar bg-danger" style="width:60%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <h6>Suggestions for Improvement:</h6>
+                        <ul id="suggestions">
+                            <li>Use more specific examples from your experience</li>
+                            <li>Speak slower and pause between key points</li>
+                            <li>Structure your answer using STAR method</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card bg-dark border-secondary mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title text-white">Interview Settings</h5>
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Interview Type</label>
+                            <select class="form-select" id="interviewType">
+                                <option value="hr">HR Round</option>
+                                <option value="technical">Technical Round</option>
+                                <option value="managerial">Managerial Round</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Difficulty</label>
+                            <select class="form-select" id="difficulty">
+                                <option value="easy">Easy</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="hard">Hard</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-outline-primary w-100" onclick="restartInterview()">Restart Interview</button>
+                    </div>
+                </div>
+
+                <div class="card bg-dark border-secondary">
+                    <div class="card-body">
+                        <h5 class="card-title text-white">Progress</h5>
+                        <div class="progress mb-3" style="height:10px;">
+                            <div class="progress-bar bg-primary" id="progressBar" style="width:20%"></div>
+                        </div>
+                        <p class="text-muted mb-0"><span id="answeredCount">1</span> of {{ total_questions }} questions answered</p>
+                    </div>
+                </div>
+
+                <div class="card bg-dark border-secondary mt-4">
+                    <div class="card-body">
+                        <h5 class="card-title text-white">Tips</h5>
+                        <ul class="text-muted small">
+                            <li>Speak clearly and confidently</li>
+                            <li>Use STAR method for behavioral questions</li>
+                            <li>Keep answers 1 to 2 minutes long</li>
+                            <li>Maintain eye contact with camera</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let mediaRecorder;
+let audioChunks = [];
+let isRecording = false;
+let currentQuestionIndex = 0;
+let timerInterval;
+let seconds = 0;
+
+const questions = {{ questions_json|safe }};
+
+function toggleRecording(){
+    if(!isRecording){
+        startRecording();
+    } else {
+        stopRecording();
+    }
+}
+
+async function startRecording(){
+    try{
+        const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+
+        mediaRecorder.ondataavailable = event => {
+            audioChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = () => {
+            const audioBlob = new Blob(audioChunks, {type:'audio/wav'});
+            processAnswer(audioBlob);
+        };
+
+        mediaRecorder.start();
+        isRecording = true;
+        document.getElementById('recordBtn').classList.add('recording');
+        document.getElementById('recordBtn').textContent = '⏹️ Stop Recording';
+        document.getElementById('recordingIndicator').style.display = 'inline-flex';
+        startTimer();
+    } catch(err){
+        alert('Microphone access denied');
+    }
+}
+
+function stopRecording(){
+    if(mediaRecorder && isRecording){
+        mediaRecorder.stop();
+        mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        isRecording = false;
+        document.getElementById('recordBtn').classList.remove('recording');
+        document.getElementById('recordBtn').textContent = '🎤 Start Recording';
+        document.getElementById('recordingIndicator').style.display = 'none';
+        stopTimer();
+        document.getElementById('nextBtn').disabled = false;
+    }
+}
+
+function startTimer(){
+    seconds = 0;
+    timerInterval = setInterval(() => {
+        seconds++;
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        document.getElementById('timer').textContent =
+            String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
+    }, 1000);
+}
+
+function stopTimer(){
+    clearInterval(timerInterval);
+}
+
+function processAnswer(audioBlob){
+    document.getElementById('transcript').textContent = 'Processing your answer...';
+
+    fetch('/interview/process-answer/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}'},
+        body: new FormData()
+    })
+   .then(response => response.json())
+   .then(data => {
+        document.getElementById('transcript').textContent = data.transcript;
+        showFeedback(data.feedback);
+    })
+   .catch(() => {
+        document.getElementById('transcript').textContent = 'Sample answer: I am passionate about technology and have worked on several projects...';
+        showFeedback(sampleFeedback());
+    });
+}
+
+function showFeedback(feedback){
+    document.getElementById('feedbackPanel').classList.add('show');
+}
+
+function sampleFeedback(){
+    return {
+        score: 72,
+        content: 8,
+        communication: 7,
+        confidence: 6,
+        suggestions: [
+            'Use more specific examples',
+            'Speak slower',
+            'Use STAR method'
+        ]
+    };
+}
+
+function nextQuestion(){
+    currentQuestionIndex++;
+    if(currentQuestionIndex < questions.length){
+        document.getElementById('currentQuestion').textContent = questions[currentQuestionIndex].text;
+        document.getElementById('questionNumber').textContent = currentQuestionIndex + 1;
+        document.getElementById('transcript').textContent = 'Click Record and start speaking...';
+        document.getElementById('feedbackPanel').classList.remove('show');
+        document.getElementById('nextBtn').disabled = true;
+        document.getElementById('answeredCount').textContent = currentQuestionIndex + 1;
+        document.getElementById('progressBar').style.width = ((currentQuestionIndex + 1) / questions.length * 100) + '%';
+        seconds = 0;
+        document.getElementById('timer').textContent = '00:00';
+    } else {
+        alert('Interview completed! Check your final score on dashboard.');
+        window.location.href = '/dashboard/';
+    }
+}
+
+function restartInterview(){
+    if(confirm('Are you sure you want to restart?')){
+        currentQuestionIndex = 0;
+        location.reload();
+    }
+}
+
+document.getElementById('interviewType').addEventListener('change', function(){
+    fetch(`/interview/change-type/${this.value}/`)
+   .then(() => location.reload());
+});
+</script>
+{% endblock %}

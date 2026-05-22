@@ -1,0 +1,239 @@
+  
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ course.name }} - EntreSkill Hub{% endblock %}
+{% block meta_description %}Learn {{ course.name }} with video lessons, quizzes, and auto certificates.{% endblock %}
+
+{% block extra_css %}
+<style>
+.course-header{
+background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+color:white;
+padding:50px 0;
+border-radius:20px;
+margin-bottom:40px;
+}
+.module-card{
+background:white;
+border-radius:15px;
+padding:25px;
+margin-bottom:20px;
+box-shadow:0 5px 20px rgba(0,0,0,0.08);
+transition:all 0.3s;
+border-left:5px solid #e2e8f0;
+}
+.module-card.completed{
+border-left-color:#10b981;
+background:#f0fdf4;
+}
+.module-card.current{
+border-left-color:#6366f1;
+background:#eff6ff;
+}
+.module-number{
+width:50px;
+height:50px;
+border-radius:12px;
+display:flex;
+align-items:center;
+justify-content:center;
+font-weight:700;
+font-size:20px;
+}
+.video-player{
+border-radius:15px;
+overflow:hidden;
+box-shadow:0 10px 40px rgba(0,0,0,0.2);
+}
+.quiz-section{
+background:white;
+border-radius:15px;
+padding:30px;
+box-shadow:0 10px 40px rgba(0,0,0,0.1);
+margin-top:40px;
+}
+.question-card{
+background:#f8fafc;
+border-radius:10px;
+padding:20px;
+margin-bottom:20px;
+border:2px solid transparent;
+transition:all 0.3s;
+}
+.question-card:hover{
+border-color:#6366f1;
+}
+.option-label{
+display:block;
+padding:15px;
+background:white;
+border-radius:8px;
+margin-bottom:10px;
+cursor:pointer;
+transition:all 0.3s;
+border:2px solid #e2e8f0;
+}
+.option-label:hover{
+background:#f1f5f9;
+border-color:#6366f1;
+}
+.option-label input:checked + span{
+color:#6366f1;
+font-weight:600;
+}
+.sidebar-sticky{
+position:sticky;
+top:20px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="course-header">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8">
+                    <span class="badge bg-light text-dark mb-3">{{ course.level|upper }} LEVEL</span>
+                    <h1 class="display-4 fw-bold mb-3">{{ course.name }}</h1>
+                    <p class="lead mb-4">{{ course.description }}</p>
+                    <div class="d-flex gap-4">
+                        <div><strong>{{ course.total_modules }}</strong> Modules</div>
+                        <div><strong>{{ course.duration }}</strong> Duration</div>
+                        <div><strong>{{ course.difficulty }}</strong> Difficulty</div>
+                    </div>
+                </div>
+                <div class="col-lg-4 text-lg-end">
+                    <div class="bg-white text-dark rounded-3 p-4 d-inline-block">
+                        <div class="text-muted mb-1">Your Progress</div>
+                        <div class="display-5 fw-bold text-primary">{{ user_progress }}%</div>
+                        {% if user_progress >= 70 %}
+                        <span class="badge bg-success mt-2">Eligible for Certificate</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            {% if current_module %}
+            <div class="video-player mb-4">
+                <video controls class="w-100" poster="{{ current_module.thumbnail.url }}">
+                    <source src="{{ current_module.video_url }}" type="video/mp4">
+                    Your browser does not support video.
+                </video>
+            </div>
+            <h3 class="mb-3">{{ current_module.title }}</h3>
+            <p class="text-muted mb-4">{{ current_module.description }}</p>
+            {% endif %}
+
+            <h3 class="mb-4">Course Modules</h3>
+            {% for module in modules %}
+            <div class="module-card {% if module.is_completed %}completed{% elif module == current_module %}current{% endif %}">
+                <div class="d-flex align-items-center">
+                    <div class="module-number" style="background:{% if module.is_completed %}#dcfce7;color:#166534{% elif module == current_module %}#dbeafe;color:#2563eb{% else %}#f1f5f9;color:#64748b{% endif %};">
+                        {% if module.is_completed %}✓{% else %}{{ forloop.counter }}{% endif %}
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="mb-1">{{ module.title }}</h5>
+                        <p class="text-muted mb-0">{{ module.duration }} minutes</p>
+                    </div>
+                    <div>
+                        {% if module.is_completed %}
+                        <span class="badge bg-success">Completed</span>
+                        {% elif module == current_module %}
+                        <a href="?module={{ module.id }}" class="btn btn-primary">Continue</a>
+                        {% else %}
+                        <a href="?module={{ module.id }}" class="btn btn-outline-primary">Start</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+            {% if user_progress >= 70 and not certificate_issued %}
+            <div class="quiz-section">
+                <h3 class="mb-4">Final Exam - {{ course.name }}</h3>
+                <p class="text-muted mb-4">Score minimum 70% to unlock next level and get your certificate.</p>
+                <form method="post" action="{% url 'education:submit_exam' course.level %}">
+                    {% csrf_token %}
+                    {% for question in exam_questions %}
+                    <div class="question-card">
+                        <h5 class="mb-3">Q{{ forloop.counter }}. {{ question.text }}</h5>
+                        {% for option in question.options %}
+                        <label class="option-label">
+                            <input type="radio" name="q{{ question.id }}" value="{{ option.value }}" required style="margin-right:10px;">
+                            <span>{{ option.text }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                    <button type="submit" class="btn btn-primary btn-lg w-100">Submit Exam</button>
+                </form>
+            </div>
+            {% elif certificate_issued %}
+            <div class="alert alert-success mt-4">
+                <h4>🎉 Congratulations!</h4>
+                <p>You have scored {{ user_score }}% and earned your certificate.</p>
+                <a href="{{ certificate_url }}" class="btn btn-success" download>Download Certificate</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-lg-4">
+            <div class="sidebar-sticky">
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">Course Progress</h5>
+                        <div class="progress mb-3" style="height:20px;">
+                            <div class="progress-bar bg-primary" style="width:{{ user_progress }}%">{{ user_progress }}%</div>
+                        </div>
+                        <div class="d-flex justify-content-between text-muted">
+                            <span>{{ completed_modules }} of {{ total_modules }} modules</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">What You Will Learn</h5>
+                        <ul class="list-unstyled">
+                            {% for outcome in course.learning_outcomes %}
+                            <li class="mb-2"><span style="color:#10b981;">✓</span> {{ outcome }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Course Requirements</h5>
+                        <ul class="list-unstyled text-muted">
+                            <li class="mb-2">📱 Device with internet</li>
+                            <li class="mb-2">📝 Notebook for notes</li>
+                            <li class="mb-2">⏰ 1 hour daily practice</li>
+                            <li class="mb-0">🎯 Minimum 70% to pass</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('video').forEach(video => {
+    video.addEventListener('ended', function(){
+        fetch('/education/mark-complete/{{ current_module.id }}/', {
+            method: 'POST',
+            headers: {'X-CSRFToken': '{{ csrf_token }}'}
+        }).then(() => location.reload());
+    });
+});
+</script>
+{% endblock %}
